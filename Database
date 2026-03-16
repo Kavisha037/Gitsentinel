@@ -1,0 +1,162 @@
+from __future__ import annotations
+import json
+import os
+from datetime import datetime
+from uuid import UUID
+import duckdb
+from storage.models import Alert, ContributorBaseline, NormalizedEvent, RepoScanResult, Severity, DetectionResult
+
+DB_PATH = os.getenv("DATABASE_PATH", "./gitsentinel.duckdb")
+
+
+class Database:
+    def __init__(self, path: str = DB_PATH):
+        self.path = path
+        self.conn = duckdb.connect(path)
+        self._migrate()
+
+    def _migrate(self) -> None:
+        self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS events (
+                id VARCHAR PRIMARY KEY,
+                platform VARCHAR, repo_id VARCHAR,
+                event_type VARCHAR, actor VARCHAR,
+                timestamp TIMESTAMP, files_json VARCHAR,
+                payload_json VARCHAR
+            )
+        """)
+        self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS alerts (
+                id VARCHAR PRIMARY KEY,
+                repo_id VARCHAR, actor VARCHAR,
+                risk_score INTEGER, severity VARCHAR,
+                findings_json VARCHAR, timestamp TIMESTAMP,
+                acknowledged BOOLEAN DEFAULT FALSE
+            )
+        """)
+        self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS scan_history (
+                id VARCHAR PRIMARY KEY,
+                repo_url VARCHAR, repo_id VARCHAR,
+                overall_risk INTEGER, overall_severity VARCHAR,
+                total_commits INTEGER, contributors_count INTEGER,
+                alerts_json VARCHAR, scan_timestamp TIMESTAMP,
+                stars INTEGER DEFAULT 0, description VARCHAR DEFAULT ''
+            )
+        """)
+        self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS baselines (
+                repo_id VARCHAR, actor VARCHAR,
+                total_commits INTEGER DEFAULT 0,
+                avg_daily DOUBLE DEFAULT 0.0,
+                commit_stddev DOUBLE DEFAULT 0.0,
+                extensions_json VARCHAR DEFAULT '[]',
+                active_hours_json VARCHAR DEFAULT '[]',
+                days_of_data INTEGER DEFAULT 0,
+                last_updated TIMESTAMP,
+                PRIMARY KEY (repo_id, actor)
+            )
+        """)
+
+    def insert_event(self, event: NormalizedEvent) -> None:
+        import uuid
+        self.conn.execute("""
+            INSERT OR REPLACE INTO events VALUES (?,?,?,?,?,?,?,?)
+        """, [str(uuid.uuid4()), event.platform, event.repo_id,
+              event.event_type, event.actor, event.timestamp,
+              json.dumps(event.files_changed), json.dumps(event.payload)])
+
+    def insert_alert(self, alert: Alert) -> None:
+        self.conn.execute("""
+            INSERT OR REPLACE INTO alerts VALUES (?,?,?,?,?,?,?,?)
+        """, [str(alert.id), alert.repo_id, alert.actor,
+              alert.risk_score, alert.severity.value,
+              json.dumps([f.to_dict() for f in alert.findings]),
+              alert.timestamp, alert.acknowledged])
+
+    def save_scan(self, result: RepoScanResult) -> None:
+        import uuid
+        self.conn.execute("""
+            INSERT OR REPLACE INTO scan_history VALUES (?,?,?,?,?,?,?,?,?,?,?)
+        """, [str(uuid.uuid4()), result.repo_url, result.repo_id,
+              result.overall_risk, result.overall_severity.value,
+              result.total_commits_scanned, result.contributors_count,
+              json.dumps([a.to_dict() for a in result.alerts]),
+              result.scan_timestamp, result.stars, result.description])
+
+    def get_alerts(self, repo_id: str | None = None, limit: int = 50) -> list[dict]:
+        if repo_id:
+            rows = self.conn.execute("""
+                SELECT id,repo_id,actor,risk_score,severity,
+                       findings_json,timestamp,acknowledged
+                FROM alerts WHERE repo_id=?
+                ORDER BY timestamp DESC LIMIT ?
+            """, [repo_id, limit]).fetchall()
+        else:
+            rows = self.conn.execute("""
+                SELECT id,repo_id,actor,risk_score,severity,
+                       findings_json,timestamp,acknowledged
+                FROM alerts ORDER BY timestamp DESC LIMIT ?
+            """, [limit]).fetchall()
+        return [self._row_to_alert(r) for r in rows]
+
+    def _row_to_alert(self, r) -> dict:
+        sev = r[4]
+        colors = {"none":"#22c55e","low":"#3b82f6","medium":"#eab308","high":"#f97316","critical":"#ef4444"}
+        return {
+            "id": r[0], "repo_id": r[1], "actor": r[2],
+            "risk_score": r[3], "severity": sev,
+            "severity_color": colors.get(sev, "#888"),
+            "findings": json.loads(r[5]),
+            "timestamp": r[6].isoformat() if hasattr(r[6],"isoformat") else str(r[6]),
+            "acknowledged": r[7],
+        }
+
+    def get_scan_history(self, limit: int = 20) -> list[dict]:
+        rows = self.conn.execute("""
+            SELECT repo_url, repo_id, overall_risk, overall_severity,
+                   total_commits, contributors_count, alerts_json,
+                   scan_timestamp, stars, description
+            FROM scan_history ORDER BY scan_timestamp DESC LIMIT ?
+        """, [limit]).fetchall()
+        colors = {"none":"#22c55e","low":"#3b82f6","medium":"#eab308","high":"#f97316","critical":"#ef4444"}
+        return [{
+            "repo_url": r[0], "repo_id": r[1],
+            "overall_risk": r[2], "overall_severity": r[3],
+            "severity_color": colors.get(r[3], "#888"),
+            "total_commits": r[4], "contributors_count": r[5],
+            "alerts": json.loads(r[6]),
+            "scan_timestamp": r[7].isoformat() if hasattr(r[7],"isoformat") else str(r[7]),
+            "stars": r[8], "description": r[9],
+        } for r in rows]
+
+    def get_stats(self) -> dict:
+        total = self.conn.execute("SELECT COUNT(*) FROM alerts").fetchone()[0]
+        critical = self.conn.execute("SELECT COUNT(*) FROM alerts WHERE severity='critical'").fetchone()[0]
+        high = self.conn.execute("SELECT COUNT(*) FROM alerts WHERE severity='high'").fetchone()[0]
+        repos = self.conn.execute("SELECT COUNT(DISTINCT repo_id) FROM scan_history").fetchone()[0]
+        return {"total_events": total, "critical_threats": critical, "high_risk": high, "monitored_repos": repos}
+
+    def acknowledge_alert(self, alert_id: str) -> None:
+        self.conn.execute("UPDATE alerts SET acknowledged=TRUE WHERE id=?", [alert_id])
+
+    def get_baseline(self, repo_id: str, actor: str) -> ContributorBaseline | None:
+        row = self.conn.execute(
+            "SELECT * FROM baselines WHERE repo_id=? AND actor=?", [repo_id, actor]
+        ).fetchone()
+        if not row:
+            return None
+        return ContributorBaseline(
+            repo_id=row[0], actor=row[1], total_commits=row[2],
+            avg_daily_commits=row[3], commit_stddev=row[4],
+            typical_extensions=json.loads(row[5]),
+            active_hours=json.loads(row[6]),
+            days_of_data=row[7], last_updated=row[8]
+        )
+
+    def reset(self) -> None:
+        for t in ["alerts", "events", "scan_history", "baselines"]:
+            self.conn.execute(f"DELETE FROM {t}")
+
+    def close(self) -> None:
+        self.conn.close()
