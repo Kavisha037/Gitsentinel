@@ -1,0 +1,41 @@
+rom __future__ import annotations
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Literal
+from uuid import UUID, uuid4
+
+
+class Severity(str, Enum):
+    NONE = "none"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+    def score(self) -> int:
+        return {"none": 0, "low": 15, "medium": 40, "high": 70, "critical": 100}[self.value]
+
+    def color(self) -> str:
+        return {
+            "none": "#22c55e",
+            "low": "#3b82f6",
+            "medium": "#eab308",
+            "high": "#f97316",
+            "critical": "#ef4444",
+        }[self.value]
+
+
+@dataclass
+class NormalizedEvent:
+    platform: Literal["github", "gitlab", "gitea", "scan"]
+    repo_id: str
+    event_type: Literal["push", "member_added", "pr_merged", "ci_modified", "scan"]
+    actor: str
+    timestamp: datetime
+    files_changed: list[str] = field(default_factory=list)
+    payload: dict = field(default_factory=dict)
+
+    def has_ci_files(self) -> bool:
+        CI = [".github/workflows/", ".gitlab-ci.yml", "Jenkinsfile", ".circleci/", "Makefile"]
+        return any(any(p in f for p in CI) for f in self.files_changed)
