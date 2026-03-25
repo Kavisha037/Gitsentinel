@@ -1,77 +1,49 @@
-# 🚀 GitSentinel
+# ⚡ GitSentinel
 
-**GitSentinel** is a smart tool that analyzes GitHub repositories to detect risky or suspicious activity in commits, contributors, and code patterns.
-
-It helps developers and teams identify potential security issues early — before they become serious problems.
-
----
-
-## 🔍 What It Does
-
-* Scans a GitHub repository using basic inputs (owner, repo, branch)
-* Analyzes recent commits and contributor activity
-* Detects suspicious patterns like:
-
-  * Secrets in code
-  * Unusual commit behavior
-  * Risky file changes
-* Generates a simple and clear **risk score**
-* Displays results in an interactive dashboard
+**Understand your code at a glance.**
+GitSentinel turns repository activity into simple, visual insights so you can quickly spot what matters.
 
 ---
 
-## 🧠 Key Features
+## 🔍 What You See
 
-* 📊 **Commit Analysis** – Scan and evaluate recent commits
-* ⚠️ **Suspicious Detection** – Identify high-risk changes
-* 👥 **Contributor Insights** – Track contributor behavior
-* 📈 **Risk Scoring** – Simple score to understand project safety
-* 🖥️ **Modern Dashboard** – Clean UI with visual insights
-
----
-
-## 🛠️ Tech Stack
-
-* **Frontend:** Next.js, TypeScript, Tailwind CSS
-* **State Management:** Zustand
-* **Backend:** Node.js (API-based scanning system)
+* 📊 Clean dashboard with key project stats
+* ⚠️ Highlights of unusual or important commits
+* 👥 Contributor activity overview
+* 🎯 Simple risk score for quick understanding
 
 ---
 
-## 📦 Project Structure
+## 🎨 Experience
 
-```bash
-src/
-  app/            # Pages (Next.js routing)
-  components/     # UI components
-  services/       # API calls
-  store/          # Global state (Zustand)
-  utils/          # Helper functions
-```
-
-## 🔗 How It Works
-
-1. User enters repository details
-2. Frontend sends request to backend API
-3. Backend scans commits and analyzes patterns
-4. Results are returned and displayed on dashboard
+* Smooth, modern interface
+* Interactive visuals and charts
+* Fast and responsive design
+* Built for clarity — no clutter, no confusion
 
 ---
 
-## 📊 Example Output
+## 🛠️ Built With
 
-* Total commits scanned
-* Suspicious commits detected
-* Risk score (Low / Medium / High)
-* Detailed commit-level insights
+* Next.js
+* TypeScript
+* Tailwind CSS
+
+---
+
+## 💡 Why GitSentinel?
+
+Instead of going through complex commit histories, GitSentinel presents everything in a way that is easy to read, quick to understand, and visually engaging.
 
 ---
 
-## 🚀 Future Improvements
+## ✨ Designed For
 
-* Real-time monitoring of repositories
-* More advanced detection models
-* Team collaboration features
-* Integration with CI/CD pipelines
+* Developers
+* Hackathon demos
+* Quick project insights
 
 ---
+
+## 👨‍💻 Frontend by
+Gourav Sahu
