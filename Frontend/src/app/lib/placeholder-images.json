@@ -1,0 +1,17 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "hero-bg",
+      "description": "Futuristic digital network background",
+      "imageUrl": "https://picsum.photos/seed/sentinel1/1920/1080",
+      "imageHint": "cyber network"
+    },
+    {
+      "id": "user-avatar-1",
+      "description": "Generic developer avatar",
+      "imageUrl": "https://picsum.photos/seed/dev1/200/200",
+      "imageHint": "hacker avatar"
+    }
+  ]
+}

@@ -1,0 +1,165 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 230 25% 7%;
+    --foreground: 210 40% 98%;
+    --card: 230 25% 10%;
+    --card-foreground: 210 40% 98%;
+    --popover: 230 25% 7%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 219 100% 60%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 187 100% 50%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 217 19% 20%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 187 100% 50%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 19% 20%;
+    --input: 217 19% 20%;
+    --ring: 219 100% 60%;
+    --radius: 1rem;
+    --chart-1: 219 100% 60%;
+    --chart-2: 187 100% 50%;
+    --chart-3: 280 65% 60%;
+    --chart-4: 340 75% 55%;
+    --chart-5: 160 60% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-body;
+    background-image: 
+      radial-gradient(at 0% 0%, hsla(219, 100%, 60%, 0.1) 0, transparent 50%),
+      radial-gradient(at 100% 100%, hsla(187, 100% , 50%, 0.05) 0, transparent 50%),
+      linear-gradient(to bottom, transparent, rgba(0,0,0,0.4));
+    background-attachment: fixed;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-headline tracking-tight;
+  }
+}
+
+.glass-panel {
+  @apply bg-card/40 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.8)];
+}
+
+.glass-card {
+  @apply bg-white/5 backdrop-blur-md border border-white/10 shadow-lg hover:bg-white/10 transition-all duration-300;
+}
+
+.glow-primary {
+  box-shadow: 0 0 30px hsla(219, 100%, 60%, 0.3);
+}
+
+.glow-secondary {
+  box-shadow: 0 0 30px hsla(187, 100%, 50%, 0.3);
+}
+
+.neon-text-primary {
+  text-shadow: 0 0 10px hsla(219, 100%, 60%, 0.5);
+}
+
+.neon-text-secondary {
+  text-shadow: 0 0 10px hsla(187, 100%, 50%, 0.5);
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes progress-indefinite {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(0%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-progress-indefinite {
+  animation: progress-indefinite 2s linear infinite;
+}
+
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.data-stream {
+  background: linear-gradient(to bottom, transparent, theme('colors.primary.DEFAULT'), transparent);
+  width: 1px;
+  height: 100px;
+  position: absolute;
+  animation: stream 4s linear infinite;
+  opacity: 0.2;
+}
+
+@keyframes stream {
+  0% { transform: translateY(-100vh); }
+  100% { transform: translateY(100vh); }
+}
+
+.shimmer-text {
+  background: linear-gradient(90deg, rgba(255,255,255,0.1), rgba(255,255,255,1), rgba(255,255,255,0.1));
+  background-size: 200% auto;
+  color: transparent;
+  background-clip: text;
+  -webkit-background-clip: text;
+  animation: shimmer 3s linear infinite;
+}
+
+@keyframes shimmer {
+  to { background-position: 200% center; }
+}
+
+.scanning-sweep {
+  position: relative;
+  overflow: hidden;
+}
+
+.scanning-sweep::after {
+  content: "";
+  position: absolute;
+  top: -100%;
+  left: -100%;
+  width: 300%;
+  height: 300%;
+  background: linear-gradient(to bottom, transparent, rgba(58, 203, 224, 0.1), transparent);
+  transform: rotate(-45deg);
+  animation: sweep 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes sweep {
+  0% { transform: translate(-50%, -50%) rotate(-45deg); }
+  100% { transform: translate(50%, 50%) rotate(-45deg); }
+}
+
+.terminal-overlay {
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.04), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.04));
+  background-size: 100% 2px, 3px 100%;
+  pointer-events: none;
+}
+
+.pulse-line {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, theme('colors.primary.DEFAULT'), transparent);
+  animation: pulse-width 3s ease-in-out infinite;
+}
+
+@keyframes pulse-width {
+  0%, 100% { width: 0%; opacity: 0; }
+  50% { width: 100%; opacity: 0.5; }
+}
