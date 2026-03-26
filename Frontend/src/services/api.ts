@@ -69,7 +69,7 @@ export interface FullScanResponse {
 }
 
 export const runAnalyse = async (data: AnalyseRequest): Promise<AnalyseResponse> => {
-    const res = await fetch(`https://foss-hackathon-production.up.railway.app/analyze/analyze`, {
+    const res = await fetch(`https://foss-hackathon-production.up.railway.app/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
