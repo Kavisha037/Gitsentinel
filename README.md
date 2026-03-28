@@ -55,6 +55,8 @@ The attacker's strategy was behavioral: spend years building trust, then strike.
 GitSentinel is a **self-hosted, open source behavioral security monitor** for GitHub, GitLab, and Gitea repositories. It answers a completely different question:
 
 > *"Is this person acting suspiciously?"*
+>
+> WEBSITE LINK - https://gitsentinelai.vercel.app/
 
 ```
 Someone pushes code  ──→  GitSentinel analyzes WHO did it,
