@@ -1,4 +1,5 @@
-# Gitsentinel - https://gitsentinelai.vercel.app/
+# Gitsentinel - [click here](https://github.com](https://gitsentinelai.vercel.app/)
+
 <div align="center">
 
 ```
