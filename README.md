@@ -322,7 +322,7 @@ Built for the **FOSS Hackathon** — 100% open source, zero proprietary dependen
 
 **Rules compliance:**
 - ✅ No proprietary APIs — GitHub REST API is public
-- ✅ FOSS license (AGPL-3.0)
+- ✅ FOSS license (AGPL-3.0) (MIT)
 - ✅ Not a blockchain/web3 project
 - ✅ Not a simple CRUD app — behavioral analysis engine
 - ✅ Not another Keras model — rule-based + statistical detection
@@ -382,9 +382,9 @@ This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published
 by the Free Software Foundation, version 3.
 
-This means: use it, modify it, deploy it — but keep it open.
-```
+This means: use it, modify it, deploy it — but keep it open
 
+GitSentinel is released under the **MIT License** — free to use, modify, and distribute for both personal and commercial purposes. We built this as an open source tool for the open source community, and we intend to keep it that way. See the `LICENSE` file for full details.
 ---
 
 <div align="center">
