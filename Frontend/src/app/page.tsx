@@ -17,8 +17,9 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import { useAuthModals } from '@/components/auth/AuthModalManager';
+import { saveScanRecord, getUserScanStats, UserStats } from '@/services/scan-history';
 
 type ScanMode = 'commit' | 'code' | 'full';
 
@@ -41,21 +42,41 @@ export default function Home() {
   const router = useRouter();
   
   const { user } = useUser();
+  const firestore = useFirestore();
   const { openSignup } = useAuthModals();
 
-  const [stats, setStats] = useState({ repos: 1245892, threats: 4589, nodes: 124 });
+  const [stats, setStats] = useState<UserStats | { reposScanned: number, threatsDetected: number, activeNodes: number }>({ 
+    reposScanned: 2, 
+    threatsDetected: 1, 
+    activeNodes: 1 
+  });
 
   useEffect(() => {
     setMounted(true);
-    const interval = setInterval(() => {
-      setStats(prev => ({
-        repos: prev.repos + Math.floor(Math.random() * 3),
-        threats: prev.threats + (Math.random() > 0.8 ? 1 : 0),
-        nodes: 120 + Math.floor(Math.random() * 10)
-      }));
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
+    
+    // If not logged in, maintain dummy random stats
+    if (!user) {
+      const interval = setInterval(() => {
+        setStats(prev => ({
+          reposScanned: prev.reposScanned + Math.floor(Math.random() * 3),
+          threatsDetected: prev.threatsDetected + (Math.random() > 0.8 ? 1 : 0),
+          activeNodes: 120 + Math.floor(Math.random() * 10)
+        }));
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
+  // Fetch real stats when user logs in
+  useEffect(() => {
+    async function loadStats() {
+      if (user && firestore) {
+        const userStats = await getUserScanStats(firestore, user.uid);
+        setStats(userStats);
+      }
+    }
+    loadStats();
+  }, [user, firestore]);
 
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -91,15 +112,40 @@ export default function Home() {
     setScannerComplete(false);
 
     try {
+      let data;
+      let threats = 0;
+      let nodes = 0;
+
       if (scanMode === 'commit') {
-        const data = await runAnalyse({ owner: formData.owner, repo: formData.repo, branch: formData.branch, last_n: formData.last_Commit, token: formData.token });
-        setResult(data);
+        data = await runAnalyse({ owner: formData.owner, repo: formData.repo, branch: formData.branch, last_n: formData.last_Commit, token: formData.token });
+        threats = data.suspicious_count;
+        nodes = data.total_analyzed;
       } else if (scanMode === 'code') {
-        const data = await runSourceCodeScan({ owner: formData.owner, repo: formData.repo, branch: formData.branch, token: formData.token });
-        setResult(data);
+        data = await runSourceCodeScan({ owner: formData.owner, repo: formData.repo, branch: formData.branch, token: formData.token });
+        threats = data.vulnerable_files;
+        nodes = data.scanned_files;
       } else {
-        const data = await runFullScan({ owner: formData.owner, repo: formData.repo, branch: formData.branch, last_n: formData.last_Commit, token: formData.token });
-        setResult(data);
+        data = await runFullScan({ owner: formData.owner, repo: formData.repo, branch: formData.branch, last_n: formData.last_Commit, token: formData.token });
+        threats = (data.commit_analysis?.suspicious_count || 0) + (data.source_code_scan?.vulnerable_files || 0);
+        nodes = (data.commit_analysis?.total_analyzed || 0) + (data.source_code_scan?.scanned_files || 0);
+      }
+      
+      setResult(data);
+      
+      // Save scan record if user is logged in
+      if (user && firestore) {
+        await saveScanRecord(firestore, user.uid, {
+          repoOwner: formData.owner,
+          repoName: formData.repo,
+          branch: formData.branch,
+          scanMode: scanMode,
+          threatsDetected: threats,
+          nodesAnalyzed: 1 // SET 1 TO ACTIVE NODES as requested
+        });
+        
+        // Refresh stats
+        const updatedStats = await getUserScanStats(firestore, user.uid);
+        setStats(updatedStats);
       }
     } catch (err: any) {
       setApiError(err.message || "Failed to audit repository");
@@ -126,10 +172,24 @@ export default function Home() {
         owner={formData.owner}
         repo={formData.repo}
         branch={formData.branch}
-        onReset={() => {
+        onReset={async () => {
           setResult(null);
           setShowScanner(false);
           setScannerComplete(false);
+          setFormData({
+            owner: '',
+            repo: '',
+            branch: 'main',
+            last_Commit: 20,
+            token: ''
+          });
+          setApiError(null);
+          
+          // Refresh stats one more time to be absolutely sure when returning to home
+          if (user && firestore) {
+            const updatedStats = await getUserScanStats(firestore, user.uid);
+            setStats(updatedStats);
+          }
         }} 
       />
     );
@@ -172,15 +232,17 @@ export default function Home() {
         </motion.div>
 
         {/* Live Intelligence Layer */}
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex flex-wrap justify-center gap-8 text-[10px] font-headline tracking-widest uppercase text-muted-foreground/60"
-        >
-          <StatItem label="Repos Scanned" value={stats.repos.toLocaleString()} icon={Database} />
-          <StatItem label="Threats Detected" value={stats.threats.toLocaleString()} icon={Shield} />
-          <StatItem label="Active Nodes" value={stats.nodes.toString()} icon={Network} />
-        </motion.div>
+        {user && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-wrap justify-center gap-8 text-[10px] font-headline tracking-widest uppercase text-muted-foreground/60"
+          >
+            <StatItem label="Repos Scanned" value={stats.reposScanned.toLocaleString()} icon={Database} />
+            <StatItem label="Threats Detected" value={stats.threatsDetected.toLocaleString()} icon={Shield} />
+            <StatItem label="Active Nodes" value={stats.activeNodes.toLocaleString()} icon={Network} />
+          </motion.div>
+        )}
 
         {/* Multi-Input Form */}
         <motion.form 
